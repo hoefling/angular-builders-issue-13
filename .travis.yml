@@ -1,0 +1,147 @@
+language: node_js
+node_js:
+  - "node"
+
+branches:
+  only:
+    - master
+
+before_script:
+  - ng new myapp
+  - cd myapp && npm install
+  - cd myapp && ng e2e
+
+script:
+  - |
+    cat <<EOM >myapp/src/app/app.module.ts
+    import { WorkerAppModule, WORKER_APP_LOCATION_PROVIDERS } from '@angular/platform-webworker';
+    import { NgModule } from '@angular/core';
+    import { APP_BASE_HREF } from '@angular/common'
+
+    import { AppComponent } from './app.component';
+
+    @NgModule({
+      declarations: [
+        AppComponent
+      ],
+      imports: [
+        WorkerAppModule
+      ],
+      providers: [
+        {
+          provide: APP_BASE_HREF,
+          useValue: '/'
+        },
+        WORKER_APP_LOCATION_PROVIDERS
+      ],
+      bootstrap: [AppComponent]
+    })
+    export class AppModule { }
+    EOM
+  - |
+    cat <<EOM >myapp/src/main.ts
+    import { enableProdMode } from '@angular/core';
+    import { bootstrapWorkerUi, WORKER_UI_LOCATION_PROVIDERS } from '@angular/platform-webworker';
+
+    import { AppModule } from './app/app.module';
+    import { environment } from './environments/environment';
+
+    if (environment.production) {
+      enableProdMode();
+    }
+
+    bootstrapWorkerUi('webworker.bundle.js', WORKER_UI_LOCATION_PROVIDERS);
+    EOM
+  - |
+    cat <<EOM >myapp/src/workerLoader.ts
+    import './polyfills.ts';
+    import '@angular/core';
+    import '@angular/common';
+
+    import { platformWorkerAppDynamic } from '@angular/platform-webworker-dynamic';
+    import { AppModule } from './app/app.module';
+
+    platformWorkerAppDynamic().bootstrapModule(AppModule);
+    EOM
+  - |
+    cat <<EOM >myapp/extra-webpack.config.js
+    const path = require('path');
+    const entryPoints = ["inline","polyfills","sw-register","styles","vendor","main"];
+    const HtmlWebpackPlugin = require('html-webpack-plugin');
+    const AotPlugin = require('@ngtools/webpack').AngularCompilerPlugin;
+
+
+    module.exports = {
+      "entry": {
+        "main": [
+          "./src/main.ts"
+        ],
+        "polyfills": [
+          "./src/polyfills.ts"
+        ],
+        "styles": [
+          "./src/styles.css"
+        ],
+        "webworker": [
+          "./src/workerLoader.ts"
+        ]
+      },
+      "output": {
+        "path": path.join(process.cwd(), "dist"),
+        "filename": "[name].bundle.js",
+        "chunkFilename": "[id].chunk.js"
+      },
+      "plugins": [
+        new HtmlWebpackPlugin({
+          "template": "./src/index.html",
+          "filename": "./index.html",
+          "excludeChunks": [
+            "webworker"
+          ],
+          "chunksSortMode": function sort(left, right) {
+            let leftIndex = entryPoints.indexOf(left.names[0]);
+            let rightIndex = entryPoints.indexOf(right.names[0]);
+            if (leftIndex > rightIndex) {
+              return 1;
+            }
+            else if (leftIndex < rightIndex) {
+              return -1;
+            }
+            else {
+              return 0;
+            }
+          }
+        }),
+        new AotPlugin({
+          "mainPath": "main.ts",
+          "entryModule": 'src/app/app.module#AppModule',
+          "exclude": [],
+          "tsConfigPath": "src/tsconfig.app.json",
+          "skipCodeGeneration": true
+        })
+      ],
+      optimization: {
+        splitChunks: {
+          cacheGroups: {
+            vendor: {
+              name: 'vendor',
+              test: /\/node_modules\//,
+              chunks: 'all',
+              priority: 0,
+              enforce: true,
+            },
+          },
+        },
+      },
+    };
+    EOM
+  - |
+    sed -i '' 's,"builder": "@angular-devkit/build-angular:browser","builder": "@angular-builders/custom-webpack:browser",' myapp/angular.json
+  - |
+    sed -i '' 's#"outputPath": "dist/myapp",#"outputPath": "dist/myapp", "customWebpackConfig": { "path": "./extra-webpack.config.js", "mergeStrategies": { "entry": "replace"$
+  - |
+    sed -i '' 's,"builder": "@angular-devkit/build-angular:dev-server","builder": "@angular-builders/dev-server:generic",' myapp/angular.json
+  - cd myapp && npm install --save @angular/platform-webworker @angular/platform-webworker-dynamic
+  - cd myapp && npm i -D @angular-builders/custom-webpack
+  - cd myapp && npm i -D @angular-builders/dev-server
+  - cd myapp && ng e2e
