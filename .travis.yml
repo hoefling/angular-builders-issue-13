@@ -2,6 +2,9 @@ language: node_js
 node_js:
   - "node"
 
+addons:
+  chrome: stable
+
 branches:
   only:
     - master
@@ -11,11 +14,12 @@ before_script:
   - ng new myapp
   - cd myapp
   - npm install
-  - ng e2e
+  - xvfb-run ng e2e
 
 script:
+  - cd myapp
   - |
-    cat <<EOM >myapp/src/app/app.module.ts
+    cat <<EOM >src/app/app.module.ts
     import { WorkerAppModule, WORKER_APP_LOCATION_PROVIDERS } from '@angular/platform-webworker';
     import { NgModule } from '@angular/core';
     import { APP_BASE_HREF } from '@angular/common'
@@ -41,7 +45,7 @@ script:
     export class AppModule { }
     EOM
   - |
-    cat <<EOM >myapp/src/main.ts
+    cat <<EOM >src/main.ts
     import { enableProdMode } from '@angular/core';
     import { bootstrapWorkerUi, WORKER_UI_LOCATION_PROVIDERS } from '@angular/platform-webworker';
 
@@ -55,7 +59,7 @@ script:
     bootstrapWorkerUi('webworker.bundle.js', WORKER_UI_LOCATION_PROVIDERS);
     EOM
   - |
-    cat <<EOM >myapp/src/workerLoader.ts
+    cat <<EOM >src/workerLoader.ts
     import './polyfills.ts';
     import '@angular/core';
     import '@angular/common';
@@ -66,7 +70,7 @@ script:
     platformWorkerAppDynamic().bootstrapModule(AppModule);
     EOM
   - |
-    cat <<EOM >myapp/extra-webpack.config.js
+    cat <<EOM >extra-webpack.config.js
     const path = require('path');
     const entryPoints = ["inline","polyfills","sw-register","styles","vendor","main"];
     const HtmlWebpackPlugin = require('html-webpack-plugin');
@@ -138,12 +142,12 @@ script:
     };
     EOM
   - |
-    sed -i '' 's,"builder": "@angular-devkit/build-angular:browser","builder": "@angular-builders/custom-webpack:browser",' myapp/angular.json
+    sed -i '' 's,"builder": "@angular-devkit/build-angular:browser","builder": "@angular-builders/custom-webpack:browser",' angular.json
   - |
-    sed -i '' 's#"outputPath": "dist/myapp",#"outputPath": "dist/myapp", "customWebpackConfig": { "path": "./extra-webpack.config.js", "mergeStrategies": { "entry": "replace"$
+    sed -i '' 's#"outputPath": "dist/myapp",#"outputPath": "dist/myapp", "customWebpackConfig": { "path": "./extra-webpack.config.js", "mergeStrategies": { "entry": "replace", "output": "replace", "optimization":"replace" } },#' angular.json
   - |
-    sed -i '' 's,"builder": "@angular-devkit/build-angular:dev-server","builder": "@angular-builders/dev-server:generic",' myapp/angular.json
-  - cd myapp && npm install --save @angular/platform-webworker @angular/platform-webworker-dynamic
-  - cd myapp && npm i -D @angular-builders/custom-webpack
-  - cd myapp && npm i -D @angular-builders/dev-server
-  - cd myapp && ng e2e
+    sed -i '' 's,"builder": "@angular-devkit/build-angular:dev-server","builder": "@angular-builders/dev-server:generic",' angular.json
+  - npm install --save @angular/platform-webworker @angular/platform-webworker-dynamic
+  - npm i -D @angular-builders/custom-webpack
+  - npm i -D @angular-builders/dev-server
+  - xvfb-run ng e2e
