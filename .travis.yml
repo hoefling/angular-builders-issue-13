@@ -141,11 +141,11 @@ script:
     };
     EOM
   - |
-    sed -i '' 's,"builder": "@angular-devkit/build-angular:browser","builder": "@angular-builders/custom-webpack:browser",' angular.json
+    sed -i 's,"builder": "@angular-devkit/build-angular:browser","builder": "@angular-builders/custom-webpack:browser",' angular.json
   - |
-    sed -i '' 's#"outputPath": "dist/myapp",#"outputPath": "dist/myapp", "customWebpackConfig": { "path": "./extra-webpack.config.js", "mergeStrategies": { "entry": "replace", "output": "replace", "optimization":"replace" } },#' angular.json
+    sed -i 's#"outputPath": "dist/myapp",#"outputPath": "dist/myapp", "customWebpackConfig": { "path": "./extra-webpack.config.js", "mergeStrategies": { "entry": "replace", "output": "replace", "optimization":"replace" } },#' angular.json
   - |
-    sed -i '' 's,"builder": "@angular-devkit/build-angular:dev-server","builder": "@angular-builders/dev-server:generic",' angular.json
+    sed -i 's,"builder": "@angular-devkit/build-angular:dev-server","builder": "@angular-builders/dev-server:generic",' angular.json
   - npm install --save @angular/platform-webworker @angular/platform-webworker-dynamic
   - npm i -D @angular-builders/custom-webpack
   - npm i -D @angular-builders/dev-server
