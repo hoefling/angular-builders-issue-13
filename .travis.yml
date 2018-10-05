@@ -9,8 +9,9 @@ branches:
 before_script:
   - npm install -g @angular/cli
   - ng new myapp
-  - cd myapp && npm install
-  - cd myapp && ng e2e
+  - cd myapp
+  - npm install
+  - ng e2e
 
 script:
   - |
