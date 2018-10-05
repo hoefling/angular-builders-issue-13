@@ -17,7 +17,6 @@ before_script:
   - xvfb-run ng e2e
 
 script:
-  - cd myapp
   - |
     cat <<EOM >src/app/app.module.ts
     import { WorkerAppModule, WORKER_APP_LOCATION_PROVIDERS } from '@angular/platform-webworker';
